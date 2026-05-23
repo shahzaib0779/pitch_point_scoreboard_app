@@ -47,7 +47,7 @@ class _TeamsPageState extends State<TeamsPage> {
 
               // ── Heading ──
               const Text(
-                'Let the Battle\nBegin! ⚔️',
+                'Let the Battle\nBegin!⚔',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,

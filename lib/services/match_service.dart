@@ -153,13 +153,15 @@ class MatchService {
 
     for (final iRow in inningRows) {
       final inningId = iRow['id'] as int;
-      final batting = await _db.getBattingForInning(inningId);
-      final bowling = await _db.getBowlingForInning(inningId);
+      final batting   = await _db.getBattingForInning(inningId);
+      final bowling   = await _db.getBowlingForInning(inningId);
+      final overScores = await _db.getOverScoresForInning(inningId);
 
       inningRecords.add(
         InningRecord.fromMap(iRow).withPlayers(
           batting: batting.map(BattingRecord.fromMap).toList(),
           bowling: bowling.map(BowlingRecord.fromMap).toList(),
+          overScoresList: overScores.map(OverScoreRecord.fromMap).toList(),
         ),
       );
     }
@@ -202,6 +204,18 @@ class MatchService {
       inning2Record: record.inning2,
     );
     return true;
+  }
+
+  // ── Record the cumulative score at the end of each over ──────────────────
+
+  Future<void> recordOverScore(
+      int inningId, int overNumber, int score, int wickets) async {
+    await _db.insertOverScore({
+      'inning_id': inningId,
+      'over_number': overNumber,
+      'score': score,
+      'wickets': wickets,
+    });
   }
 
   // ── Delete a match ────────────────────────────────────────────────────────

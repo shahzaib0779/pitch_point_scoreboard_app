@@ -12,6 +12,9 @@ class ScoreboardProvider extends ChangeNotifier {
   String nonStriker = '';
   String currentBowler = '';
 
+  /// Deliveries in the current over, e.g. ['1','·','4','Wd','W','NB']
+  List<String> currentOverBalls = [];
+
   // ── Database tracking ────────────────────────────────────────────────────
 
   int? matchId;
@@ -72,6 +75,7 @@ class ScoreboardProvider extends ChangeNotifier {
     currentBowler = '';
     striker = '';
     nonStriker = '';
+    currentOverBalls = [];
     notifyListeners();
   }
 
@@ -82,9 +86,15 @@ class ScoreboardProvider extends ChangeNotifier {
     striker = '';
     nonStriker = '';
     currentBowler = '';
+    currentOverBalls = [];
     matchId = null;
     inning1Id = null;
     inning2Id = null;
+    notifyListeners();
+  }
+
+  void addBallToOver(String label) {
+    currentOverBalls.add(label);
     notifyListeners();
   }
 
@@ -287,6 +297,7 @@ class ScoreboardProvider extends ChangeNotifier {
     activeInning.bowlersList
         .firstWhere((b) => b.playerName == currentBowler)
         .balls = 0;
+    currentOverBalls = [];
     notifyListeners();
   }
 

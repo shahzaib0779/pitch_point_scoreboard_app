@@ -23,7 +23,7 @@ class DatabaseHelper {
     final path = p.join(dir, 'pitch_point.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
@@ -102,6 +102,17 @@ class DatabaseHelper {
         FOREIGN KEY (inning_id) REFERENCES innings(id) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE over_scores (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        inning_id    INTEGER NOT NULL,
+        over_number  INTEGER NOT NULL,
+        score        INTEGER NOT NULL,
+        wickets      INTEGER NOT NULL,
+        FOREIGN KEY (inning_id) REFERENCES innings(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   // ── Migration: v1 → v2 (add extras + retired_hurt columns) ───────────────
@@ -117,12 +128,22 @@ class DatabaseHelper {
         'ALTER TABLE innings ADD COLUMN leg_byes INTEGER DEFAULT 0',
         'ALTER TABLE batting_performances ADD COLUMN is_retired_hurt INTEGER DEFAULT 0',
       ]) {
-        try {
-          await db.execute(stmt);
-        } catch (_) {
-          // Column already exists — safe to ignore
-        }
+        try { await db.execute(stmt); } catch (_) {}
       }
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS over_scores (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            inning_id    INTEGER NOT NULL,
+            over_number  INTEGER NOT NULL,
+            score        INTEGER NOT NULL,
+            wickets      INTEGER NOT NULL,
+            FOREIGN KEY (inning_id) REFERENCES innings(id) ON DELETE CASCADE
+          )
+        ''');
+      } catch (_) {}
     }
   }
 
@@ -232,6 +253,24 @@ class DatabaseHelper {
       'bowling_performances',
       where: 'inning_id = ?',
       whereArgs: [inningId],
+    );
+  }
+
+  // ── Over scores CRUD ──────────────────────────────────────────────────────
+
+  Future<void> insertOverScore(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.insert('over_scores', data);
+  }
+
+  Future<List<Map<String, dynamic>>> getOverScoresForInning(
+      int inningId) async {
+    final db = await database;
+    return db.query(
+      'over_scores',
+      where: 'inning_id = ?',
+      whereArgs: [inningId],
+      orderBy: 'over_number ASC',
     );
   }
 }

@@ -154,22 +154,25 @@ class _ScoreboardState extends State<Scoreboard> {
         sp.updateBatsmanScore(sp.striker, runs, 1);
         if (runs.isOdd) { sp.rotateStrike(); }
         sp.updateBowlerScore(sp.currentBowler, runs, 0);
+        sp.addBallToOver('$runs');
         await _handleOverEnd(sp);
 
       case DeliveryType.noBall:
-        // Ball doesn't count to over; batsman gets runs but ball not counted
         sp.updateBatsmanScore(sp.striker, runs, 0);
         if (runs.isOdd) { sp.rotateStrike(); }
-        sp.updateNoBall(runs); // penalty + runs to bowler, no ball count
+        sp.updateNoBall(runs);
+        sp.addBallToOver('NB');
 
       case DeliveryType.bye:
         sp.addBye(runs);
         if (runs.isOdd) { sp.rotateStrike(); }
+        sp.addBallToOver('B');
         await _handleOverEnd(sp);
 
       case DeliveryType.legBye:
         sp.addLegBye(runs);
         if (runs.isOdd) { sp.rotateStrike(); }
+        sp.addBallToOver('LB');
         await _handleOverEnd(sp);
     }
     _resetDeliveryType();
@@ -180,15 +183,16 @@ class _ScoreboardState extends State<Scoreboard> {
   Future<void> _scoreDot(ScoreboardProvider sp) async {
     switch (_deliveryType) {
       case DeliveryType.normal:
-      case DeliveryType.bye:    // bye-dot = dot (keeper took it cleanly)
-      case DeliveryType.legBye: // lb-dot  = dot
+      case DeliveryType.bye:
+      case DeliveryType.legBye:
         sp.addBallToBatsman();
         sp.updateBowlerScore(sp.currentBowler, 0, 0);
+        sp.addBallToOver('·');
         await _handleOverEnd(sp);
 
       case DeliveryType.noBall:
-        // NB dot: 1 penalty run only, ball doesn't count to over
         sp.updateNoBall(0);
+        sp.addBallToOver('NB');
     }
     _resetDeliveryType();
     _saveProgress();
@@ -202,14 +206,14 @@ class _ScoreboardState extends State<Scoreboard> {
       case DeliveryType.legBye:
         sp.addBallToBatsman();
         sp.updateBowlerScore(sp.currentBowler, 0, 1);
+        sp.addBallToOver('W');
         await _handleWicketFallout(sp);
         await _handleOverEnd(sp);
 
       case DeliveryType.noBall:
-        // Run-out on NB: wicket is valid; 1 penalty; ball doesn't count
         sp.updateNoBall(0, isWicket: true);
+        sp.addBallToOver('NB');
         await _handleWicketFallout(sp);
-        // No over end (NB)
     }
     _resetDeliveryType();
     _saveProgress();
@@ -237,8 +241,8 @@ class _ScoreboardState extends State<Scoreboard> {
     final runs = await _wideOptionsSheet();
     if (runs == null) { return; }
     sp.updateWide(runs);
+    sp.addBallToOver('Wd');
     _saveProgress();
-    // Wide never counts to over, so no _handleOverEnd
   }
 
   Future<int?> _wideOptionsSheet() async {
@@ -385,13 +389,136 @@ class _ScoreboardState extends State<Scoreboard> {
 
     sp.resetCurrentBowlerBalls();
 
-    final name =
-        await _inputDialog('New Bowler Name', TextInputType.name);
+    // Previous bowlers (excluding the one who just finished)
+    final prev = sp.activeInning.bowlersList
+        .where((b) => b.playerName != sp.currentBowler)
+        .map((b) => b.playerName)
+        .toList();
+
+    String? name;
+    if (prev.isNotEmpty) {
+      final picked = await _bowlerPickerSheet(prev);
+      if (picked == null) { return; }
+      name = picked == '__new__'
+          ? await _inputDialog('New Bowler Name', TextInputType.name)
+          : picked;
+    } else {
+      name = await _inputDialog('New Bowler Name', TextInputType.name);
+    }
+
     if (name != null && name.isNotEmpty) {
       sp.setBowler(name);
-      sp.activeInning.addBowler(Bowling(playerName: name));
-      sp.rotateStrike(); // batsmen swap ends
+      if (!sp.activeInning.bowlersList.any((b) => b.playerName == name)) {
+        sp.activeInning.addBowler(Bowling(playerName: name));
+      }
+      sp.rotateStrike();
     }
+
+    // Persist the score at the end of this over
+    if (sp.activeInningId != null) {
+      MatchService.instance.recordOverScore(
+        sp.activeInningId!,
+        sp.activeInning.oversBowled,
+        sp.activeInning.totalScore,
+        sp.activeInning.totalWickets,
+      );
+    }
+  }
+
+  Future<String?> _bowlerPickerSheet(List<String> previous) {
+    return showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Select Bowler',
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: Color(0xFF212121),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Previously bowled this innings',
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                fontSize: 12,
+                color: Color(0xFF9E9E9E),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...previous.map(
+              (name) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: const Color(0xFFD32F2F).withValues(alpha: 0.12),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: Color(0xFFD32F2F),
+                    ),
+                  ),
+                ),
+                title: Text(
+                  name,
+                  style: const TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: Color(0xFF212121),
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded,
+                    color: Color(0xFFBDBDBD)),
+                onTap: () => Navigator.pop(ctx, name),
+              ),
+            ),
+            const Divider(height: 20),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                radius: 18,
+                backgroundColor: const Color(0xFFD32F2F).withValues(alpha: 0.12),
+                child: const Icon(Icons.add, color: Color(0xFFD32F2F), size: 18),
+              ),
+              title: const Text(
+                'New Bowler',
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Color(0xFFD32F2F),
+                ),
+              ),
+              onTap: () => Navigator.pop(ctx, '__new__'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Inning completed ──────────────────────────────────────────────────────
@@ -590,14 +717,6 @@ class _ScoreboardState extends State<Scoreboard> {
         title: Text(
           'Inning ${sp.currentInning}  •  ${sp.activeInning.battingTeamName}',
         ),
-        actions: [
-          // Manual strike swap
-          IconButton(
-            icon: const Icon(Icons.compare_arrows_rounded),
-            tooltip: 'Swap Strike',
-            onPressed: () => sp.rotateStrike(),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -705,7 +824,46 @@ class _ScoreboardState extends State<Scoreboard> {
                     horizontal: 16, vertical: 14),
                 child: Column(
                   children: [
-                    _sectionLabel('Batsmen'),
+                    // ── Batsmen header with rotate strike ──────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _sectionLabel('Batsmen'),
+                        GestureDetector(
+                          onTap: () => sp.rotateStrike(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD32F2F)
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFD32F2F)
+                                    .withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.compare_arrows_rounded,
+                                    size: 13, color: Color(0xFFD32F2F)),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Rotate',
+                                  style: TextStyle(
+                                    fontFamily: 'Montserrat',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                    color: Color(0xFFD32F2F),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 10),
                     _batsmanRow(sp.striker, true, sp),
                     const Padding(
@@ -717,47 +875,24 @@ class _ScoreboardState extends State<Scoreboard> {
                       padding: EdgeInsets.symmetric(vertical: 6),
                       child: Divider(height: 1),
                     ),
-                    // Overs progress bar
+                    // ── Current over ball-by-ball ───────────────────────
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Over Progress',
-                          style: TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
-                            color: Color(0xFF757575),
-                          ),
-                        ),
+                        _sectionLabel('This Over'),
                         Text(
-                          '$oversBowled.$balls / $totalOvers.0',
+                          '$oversBowled.$balls / $totalOvers',
                           style: const TextStyle(
                             fontFamily: 'Montserrat',
                             fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                            fontSize: 12,
                             color: Color(0xFF212121),
                           ),
                         ),
                       ],
                     ),
-                    if (totalOvers > 0) ...[
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (oversBowled * 6 + balls) /
-                              (totalOvers * 6),
-                          minHeight: 6,
-                          backgroundColor:
-                              const Color(0xFFEEEEEE),
-                          valueColor:
-                              const AlwaysStoppedAnimation<Color>(
-                                  Color(0xFFD32F2F)),
-                        ),
-                      ),
-                    ],
+                    const SizedBox(height: 8),
+                    _OverBallsRow(sp: sp),
                   ],
                 ),
               ),
@@ -854,11 +989,13 @@ class _ScoreboardState extends State<Scoreboard> {
                       Expanded(
                           child: ScoreButton(
                               label: '4',
+                              variant: ScoreButtonVariant.boundary,
                               onPressed: () => _scoreRun(sp, 4))),
                       const SizedBox(width: 10),
                       Expanded(
                           child: ScoreButton(
                               label: '6',
+                              variant: ScoreButtonVariant.six,
                               onPressed: () => _scoreRun(sp, 6))),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1027,6 +1164,94 @@ class _DeliveryTypeSelector extends StatelessWidget {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+// ── Over ball-by-ball row ─────────────────────────────────────────────────────
+
+class _OverBallsRow extends StatelessWidget {
+  final ScoreboardProvider sp;
+
+  const _OverBallsRow({required this.sp});
+
+  @override
+  Widget build(BuildContext context) {
+    final legalBalls = sp.getCurrentBowls().clamp(0, 6);
+    final emptySlots = 6 - legalBalls;
+
+    return Wrap(
+      spacing: 5,
+      runSpacing: 5,
+      children: [
+        ...sp.currentOverBalls.map((b) => _BallChip(label: b)),
+        ...List.generate(emptySlots, (_) => const _EmptyBallSlot()),
+      ],
+    );
+  }
+}
+
+class _BallChip extends StatelessWidget {
+  final String label;
+
+  const _BallChip({required this.label});
+
+  Color get _color {
+    switch (label) {
+      case '·':
+        return const Color(0xFF9E9E9E);
+      case 'W':
+        return const Color(0xFF212121);
+      case 'Wd':
+      case 'NB':
+        return const Color(0xFFE65100);
+      case 'B':
+      case 'LB':
+        return const Color(0xFF546E7A);
+      default: // runs 1–6
+        return const Color(0xFFD32F2F);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: _color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyBallSlot extends StatelessWidget {
+  const _EmptyBallSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
+      ),
     );
   }
 }

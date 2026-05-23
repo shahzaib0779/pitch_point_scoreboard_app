@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum ScoreButtonVariant { run, extra, wicket, dot, retired }
+enum ScoreButtonVariant { run, boundary, six, extra, wicket, dot, retired }
 
 class ScoreButton extends StatelessWidget {
   final String label;
@@ -14,20 +14,7 @@ class ScoreButton extends StatelessWidget {
     this.variant = ScoreButtonVariant.run,
   });
 
-  Color _bgColor() {
-    switch (variant) {
-      case ScoreButtonVariant.run:
-        return const Color(0xFFD32F2F);
-      case ScoreButtonVariant.extra:
-        return const Color(0xFFE65100); // orange
-      case ScoreButtonVariant.wicket:
-        return const Color(0xFF6A0000); // dark red
-      case ScoreButtonVariant.dot:
-        return const Color(0xFF37474F); // dark grey-blue
-      case ScoreButtonVariant.retired:
-        return const Color(0xFF4A148C); // deep purple
-    }
-  }
+  Color _bgColor() => const Color(0xFFD32F2F);
 
   @override
   Widget build(BuildContext context) {

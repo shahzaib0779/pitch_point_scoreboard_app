@@ -81,14 +81,12 @@ class _MainPageState extends State<MainPage> {
               _MenuCard(
                 icon: Icons.sports_cricket_rounded,
                 label: 'Start New Match',
-                subtitle: 'Set up teams and begin',
                 gradient: const LinearGradient(
                   colors: [Color(0xFFD32F2F), Color(0xFF8B0000)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 onTap: () {
-                  // Reset any previous match state
                   context.read<ScoreboardProvider>().resetMatch();
                   context.read<TeamNamesProvider>().resetTeams();
                   Navigator.push(
@@ -104,7 +102,6 @@ class _MainPageState extends State<MainPage> {
               _MenuCard(
                 icon: Icons.bar_chart_rounded,
                 label: 'Match History',
-                subtitle: 'View previous stats',
                 gradient: const LinearGradient(
                   colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
                   begin: Alignment.topLeft,
@@ -124,7 +121,6 @@ class _MainPageState extends State<MainPage> {
               _MenuCard(
                 icon: Icons.exit_to_app_rounded,
                 label: 'Exit',
-                subtitle: 'Close the application',
                 gradient: const LinearGradient(
                   colors: [Color(0xFF424242), Color(0xFF212121)],
                   begin: Alignment.topLeft,
@@ -336,14 +332,12 @@ class _Header extends StatelessWidget {
 class _MenuCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String subtitle;
   final Gradient gradient;
   final VoidCallback onTap;
 
   const _MenuCard({
     required this.icon,
     required this.label,
-    required this.subtitle,
     required this.gradient,
     required this.onTap,
   });
@@ -369,53 +363,38 @@ class _MenuCard extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-                vertical: 20, horizontal: 22),
+                vertical: 10, horizontal: 16),
             child: Row(
               children: [
                 // Icon bubble
                 Container(
-                  padding: const EdgeInsets.all(11),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Colors.white, size: 26),
+                  child: Icon(icon, color: Colors.white, size: 18),
                 ),
 
-                const SizedBox(width: 18),
+                const SizedBox(width: 12),
 
                 // Text
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Montserrat',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontFamily: 'Montserrat',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
 
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: Colors.white54,
-                  size: 15,
+                  size: 12,
                 ),
               ],
             ),

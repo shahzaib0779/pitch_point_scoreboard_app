@@ -103,7 +103,7 @@ class _TossScreenState extends State<TossScreen>
               const SizedBox(height: 8),
 
               Text(
-                '${provider.team1}  is making the call',
+                '${provider.team1} is making the call',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,

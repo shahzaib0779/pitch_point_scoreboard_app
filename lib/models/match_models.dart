@@ -1,6 +1,26 @@
 // Data-transfer models that mirror the SQLite tables.
 // All fields map 1-to-1 with column names (snake_case ↔ camelCase).
 
+// ── Over score (cumulative score at end of each over) ─────────────────────────
+
+class OverScoreRecord {
+  final int overNumber;
+  final int score;
+  final int wickets;
+
+  const OverScoreRecord({
+    required this.overNumber,
+    required this.score,
+    required this.wickets,
+  });
+
+  factory OverScoreRecord.fromMap(Map<String, dynamic> m) => OverScoreRecord(
+        overNumber: m['over_number'] as int,
+        score: m['score'] as int,
+        wickets: m['wickets'] as int,
+      );
+}
+
 // ── Batting performance ───────────────────────────────────────────────────────
 
 class BattingRecord {
@@ -163,6 +183,7 @@ class InningRecord {
   // Populated by MatchService after a JOIN
   final List<BattingRecord> battingList;
   final List<BowlingRecord> bowlingList;
+  final List<OverScoreRecord> overScores;
 
   const InningRecord({
     this.id,
@@ -184,6 +205,7 @@ class InningRecord {
     this.legByes = 0,
     this.battingList = const [],
     this.bowlingList = const [],
+    this.overScores = const [],
   });
 
   int get totalExtras => wides + noBalls + byes + legByes;
@@ -231,6 +253,7 @@ class InningRecord {
   InningRecord withPlayers({
     required List<BattingRecord> batting,
     required List<BowlingRecord> bowling,
+    List<OverScoreRecord> overScoresList = const [],
   }) =>
       InningRecord(
         id: id,
@@ -252,6 +275,7 @@ class InningRecord {
         legByes: legByes,
         battingList: batting,
         bowlingList: bowling,
+        overScores: overScoresList,
       );
 
   String get scoreDisplay => '$totalScore/$totalWickets';
