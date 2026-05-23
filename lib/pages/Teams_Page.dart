@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:pitch_point/Providers/team_names_provider.dart';
 import 'package:pitch_point/pages/toss_page.dart';
@@ -37,105 +35,225 @@ class _TeamsPageState extends State<TeamsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Enter Teams',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Montserrat',
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: const Text('New Match'),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 100),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                "Let the battle\n begin! ⚔️🔥",
-                style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Montserrat',
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+              const SizedBox(height: 36),
+
+              // ── Heading ──
+              const Text(
+                'Let the Battle\nBegin! ⚔️',
                 textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  fontFamily: 'Montserrat',
+                  color: Color(0xFFD32F2F),
+                  height: 1.2,
+                ),
               ),
+
+              const SizedBox(height: 8),
+
+              const Text(
+                'Enter both team names to get started',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF9E9E9E),
+                ),
+              ),
+
               const SizedBox(height: 40),
 
-              // Team 1 input
-              TeamNamesFields(
-                labelName: 'Enter Team 1',
+              // ── Team 1 ──
+              _TeamInputCard(
+                teamNumber: 1,
                 controller: team1Controller,
-                onChanged: (value) {
-                  teamProvider.setTeam1(value);
+                onChanged: (v) {
+                  teamProvider.setTeam1(v);
                   teamProvider.setEnabled(
-                    value.isNotEmpty && team2Controller.text.isNotEmpty,
+                    v.trim().isNotEmpty &&
+                        team2Controller.text.trim().isNotEmpty,
                   );
                 },
               ),
-              const SizedBox(height: 20),
 
-              // Team 2 input
-              TeamNamesFields(
-                labelName: 'Enter Team 2',
-                controller: team2Controller,
-                onChanged: (value) {
-                  teamProvider.setTeam2(value);
-                  teamProvider.setEnabled(
-                    value.isNotEmpty && team1Controller.text.isNotEmpty,
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              ElevatedButton(
-                onPressed: teamProvider.isEnabled
-                    ? () {
-                        teamProvider.setTeam1(team1Controller.text);
-                        teamProvider.setTeam2(team2Controller.text);
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>TossScreen()));
-                      }
-                    : null,
-                style: ButtonStyle(
-                  backgroundColor:
-                      MaterialStateProperty.resolveWith<Color>((states) {
-                    if (states.contains(MaterialState.hovered)) {
-                      return teamProvider.isEnabled
-                          ? const Color.fromARGB(255, 155, 15, 5)
-                          : Colors.grey;
-                    }
-                    if (states.contains(MaterialState.pressed)) {
-                      return Colors.black;
-                    }
-                    return teamProvider.isEnabled
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey;
-                  }),
-                  padding: MaterialStateProperty.all(
-                    const EdgeInsets.symmetric(vertical: 15, horizontal: 50),
+              // ── VS divider ──
+              Row(
+                children: [
+                  const Expanded(child: Divider(thickness: 1)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD32F2F),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'VS',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
                   ),
-                  elevation: MaterialStateProperty.all(4),
-                  shape: MaterialStateProperty.all(
-                    const StadiumBorder(
-                      side: BorderSide(width: 1.5, color: Colors.black26),
+                  const Expanded(child: Divider(thickness: 1)),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Team 2 ──
+              _TeamInputCard(
+                teamNumber: 2,
+                controller: team2Controller,
+                onChanged: (v) {
+                  teamProvider.setTeam2(v);
+                  teamProvider.setEnabled(
+                    v.trim().isNotEmpty &&
+                        team1Controller.text.trim().isNotEmpty,
+                  );
+                },
+              ),
+
+              const SizedBox(height: 40),
+
+              // ── Next button ──
+              AnimatedOpacity(
+                opacity: teamProvider.isEnabled ? 1.0 : 0.45,
+                duration: const Duration(milliseconds: 200),
+                child: ElevatedButton.icon(
+                  onPressed: teamProvider.isEnabled
+                      ? () {
+                          teamProvider
+                              .setTeam1(team1Controller.text.trim());
+                          teamProvider
+                              .setTeam2(team2Controller.text.trim());
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TossScreen()),
+                          );
+                        }
+                      : null,
+                  icon: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Proceed to Toss',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
-                child: Text(
-                  "Next",
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Montserrat',
+              ),
+
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Team input card ───────────────────────────────────────────────────────────
+
+class _TeamInputCard extends StatelessWidget {
+  final int teamNumber;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  const _TeamInputCard({
+    required this.teamNumber,
+    required this.controller,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD32F2F),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    '$teamNumber',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
                   ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Team $teamNumber',
+                style: const TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: Color(0xFF212121),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          TeamNamesFields(
+            labelName: 'Enter team name',
+            controller: controller,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }
