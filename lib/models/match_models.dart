@@ -295,6 +295,7 @@ class MatchRecord {
   final int maxWickets;
   final String result;
   final String winner;
+  final String manOfMatch;
   final bool isCompleted;
   final int currentInning;
   final String createdAt;
@@ -312,6 +313,7 @@ class MatchRecord {
     this.maxWickets = 0,
     this.result = '',
     this.winner = '',
+    this.manOfMatch = '',
     this.isCompleted = false,
     this.currentInning = 1,
     required this.createdAt,
@@ -328,6 +330,7 @@ class MatchRecord {
         maxWickets: m['max_wickets'] as int? ?? 0,
         result: m['result'] as String? ?? '',
         winner: m['winner'] as String? ?? '',
+        manOfMatch: m['man_of_match'] as String? ?? '',
         isCompleted: (m['is_completed'] as int? ?? 0) == 1,
         currentInning: m['current_inning'] as int? ?? 1,
         createdAt: m['created_at'] as String,
@@ -343,6 +346,7 @@ class MatchRecord {
         'max_wickets': maxWickets,
         'result': result,
         'winner': winner,
+        'man_of_match': manOfMatch,
         'is_completed': isCompleted ? 1 : 0,
         'current_inning': currentInning,
         'created_at': createdAt,
@@ -358,6 +362,7 @@ class MatchRecord {
         maxWickets: maxWickets,
         result: result,
         winner: winner,
+        manOfMatch: manOfMatch,
         isCompleted: isCompleted,
         currentInning: currentInning,
         createdAt: createdAt,

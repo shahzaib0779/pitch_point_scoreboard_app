@@ -57,8 +57,14 @@ class MatchDetailsPage extends StatelessWidget {
               _InningScorecard(inning: inning2, inningLabel: 'Inning 2'),
               const SizedBox(height: 14),
             ],
-            if (match.result.isNotEmpty) _ResultBanner(result: match.result),
-            const SizedBox(height: 28),
+            if (match.result.isNotEmpty) ...[
+              _ResultBanner(result: match.result),
+              const SizedBox(height: 12),
+            ],
+            if (match.manOfMatch.isNotEmpty) ...[
+              _ManOfMatchCard(playerName: match.manOfMatch),
+              const SizedBox(height: 14),
+            ],
           ],
         ),
       ),
@@ -942,10 +948,16 @@ class _ScoringChartPainter extends CustomPainter {
       ..color = Colors.white.withValues(alpha: 0.05)
       ..strokeWidth = 1;
     final overStep = totalOvers <= 10 ? 2 : totalOvers <= 20 ? 5 : 10;
-    for (int o = 0; o <= totalOvers; o += overStep) {
+    for (int o = 1; o <= totalOvers; o += overStep) {
       final x = _left + (o / totalOvers) * w;
       canvas.drawLine(Offset(x, _top), Offset(x, _top + h), vGridPaint);
       _drawLabel(canvas, '$o', Offset(x, _top + h + 4), TextAlign.center);
+    }
+    // Ensure totalOvers is always shown if not already included by the loop
+    if ((totalOvers - 1) % overStep != 0) {
+      final x = _left + (totalOvers / totalOvers) * w;
+      canvas.drawLine(Offset(x, _top), Offset(x, _top + h), vGridPaint);
+      _drawLabel(canvas, '$totalOvers', Offset(x, _top + h + 4), TextAlign.center);
     }
 
     // ── Axes ──────────────────────────────────────────────────────────
@@ -1029,3 +1041,72 @@ class _ScoringChartPainter extends CustomPainter {
       old.inning2Scores != inning2Scores ||
       old.totalOvers != totalOvers;
 }
+
+// ── Man of the Match card ─────────────────────────────────────────────────────
+
+class _ManOfMatchCard extends StatelessWidget {
+  final String playerName;
+
+  const _ManOfMatchCard({required this.playerName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1565C0).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  'MAN OF THE MATCH',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    color: Colors.white60,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  playerName,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 22),
+        ],
+      ),
+    );
+  }
+}
+

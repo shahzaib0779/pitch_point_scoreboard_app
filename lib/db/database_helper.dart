@@ -23,7 +23,7 @@ class DatabaseHelper {
     final path = p.join(dir, 'pitch_point.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
@@ -42,6 +42,7 @@ class DatabaseHelper {
         max_wickets     INTEGER DEFAULT 0,
         result          TEXT    DEFAULT '',
         winner          TEXT    DEFAULT '',
+        man_of_match    TEXT    DEFAULT '',
         is_completed    INTEGER DEFAULT 0,
         current_inning  INTEGER DEFAULT 1,
         created_at      TEXT    NOT NULL
@@ -143,6 +144,11 @@ class DatabaseHelper {
             FOREIGN KEY (inning_id) REFERENCES innings(id) ON DELETE CASCADE
           )
         ''');
+      } catch (_) {}
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE matches ADD COLUMN man_of_match TEXT DEFAULT \'\'');
       } catch (_) {}
     }
   }

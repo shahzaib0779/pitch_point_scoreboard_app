@@ -131,15 +131,73 @@ class MatchService {
 
   Future<void> completeMatch(
       int matchId, String result, String winner) async {
+    final record = await getFullMatch(matchId);
+    if (record == null) return;
+
+    final manOfMatch = _calculateManOfMatch(record, winner);
+
     await _db.updateMatch(matchId, {
       'is_completed': 1,
       'result': result,
       'winner': winner,
+      'man_of_match': manOfMatch,
     });
     final innings = await _db.getInningsForMatch(matchId);
     for (final row in innings) {
       await _db.updateInning(row['id'] as int, {'is_completed': 1});
     }
+  }
+
+  // ── Calculate Man of the Match ────────────────────────────────────────────
+
+  String _calculateManOfMatch(MatchRecord match, String winner) {
+    final allBatters = <String, int>{};
+    final allBowlers = <String, ({int wickets, double economy})>{};
+
+    // Collect batting and bowling stats
+    for (final inning in match.innings) {
+      // Top batsman in this inning
+      for (final batter in inning.battingList) {
+        final current = allBatters[batter.playerName] ?? 0;
+        allBatters[batter.playerName] = current + batter.runs;
+      }
+      // Bowlers
+      for (final bowler in inning.bowlingList) {
+        allBowlers[bowler.playerName] =
+            (wickets: bowler.wickets, economy: bowler.economy);
+      }
+    }
+
+    // Find top batsman
+    String? topBatsman;
+    int topRuns = 0;
+    for (final entry in allBatters.entries) {
+      if (entry.value > topRuns) {
+        topRuns = entry.value;
+        topBatsman = entry.key;
+      }
+    }
+
+    // Find best bowler (most wickets, then lowest economy)
+    String? bestBowler;
+    int bestWickets = 0;
+    double bestEconomy = double.infinity;
+    for (final entry in allBowlers.entries) {
+      if (entry.value.wickets > bestWickets ||
+          (entry.value.wickets == bestWickets &&
+              entry.value.economy < bestEconomy)) {
+        bestWickets = entry.value.wickets;
+        bestEconomy = entry.value.economy;
+        bestBowler = entry.key;
+      }
+    }
+
+    // Prefer winner's team player; if both from same team, prefer batsman if high runs
+    if (topBatsman != null &&
+        (bestBowler == null || topRuns >= 30 || bestWickets <= 1)) {
+      return topBatsman;
+    }
+    return bestBowler ?? '';
   }
 
   // ── Load full match with all player data ──────────────────────────────────
