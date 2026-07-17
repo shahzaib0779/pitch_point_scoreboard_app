@@ -1,9 +1,13 @@
+# Claude Code local settings
+.claude/
+
 # Miscellaneous
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
+Thumbs.db
 .atom/
 .build/
 .buildlog/
